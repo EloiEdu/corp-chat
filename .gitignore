@@ -1,0 +1,46 @@
+﻿# ==========================================
+# Node.js & NestJS Backend
+# ==========================================
+/backend/node_modules/
+/backend/dist/
+/backend/*.tsbuildinfo
+
+# ==========================================
+# Prisma ORM
+# ==========================================
+/backend/src/generated/prisma/
+/backend/generated/prisma/
+
+# ==========================================
+# Environment & Secrets (Keep .env.example)
+# ==========================================
+.env
+.env.*
+!.env.example
+/backend/.env
+/backend/.env.*
+!/backend/.env.example
+
+# ==========================================
+# AI Editors & IDE Artifacts
+# ==========================================
+/backend/.agents/
+/backend/.claude/
+/backend/.windsurf/
+/backend/skills-lock.json
+.vscode/
+.idea/
+
+# ==========================================
+# System & Logs
+# ==========================================
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+.DS_Store
+Thumbs.db
+
+# ==========================================
+# Docker Volumes & Local Data
+# ==========================================
+/pgdata/
