@@ -2,9 +2,14 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { promisify } from 'node:util';
-import { randomBytes, scrypt as scryptCallback } from 'node:crypto';
+import {
+  randomBytes,
+  scrypt as scryptCallback,
+  timingSafeEqual,
+} from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 
@@ -46,6 +51,47 @@ export class UsersService {
       }
       throw error;
     }
+  }
+
+  async validateCredentials(email: string, password: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.trim().toLowerCase() },
+      select: {
+        ...publicUserSelect,
+        passwordHash: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const [scheme, salt, storedHash, ...extraParts] = user.passwordHash.split(':');
+    if (
+      scheme !== 'scrypt' ||
+      !salt ||
+      extraParts.length > 0 ||
+      !storedHash ||
+      !/^[\da-f]{128}$/i.test(storedHash)
+    ) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const derivedKey = (await scrypt(password, salt, 64)) as Buffer;
+    const expectedHash = Buffer.from(storedHash, 'hex');
+    if (!timingSafeEqual(derivedKey, expectedHash)) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      avatarUrl: user.avatarUrl,
+      status: user.status,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
   }
 
   findAll() {
