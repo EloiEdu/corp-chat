@@ -27,6 +27,22 @@ services:
       - redis
       - localstack
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: corp_chat_frontend
+    restart: unless-stopped
+    working_dir: /usr/src/app
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm start -- --host 0.0.0.0 --port 4200 --poll 1000
+    depends_on:
+      - api
+
   postgres:
     image: postgres:15-alpine
     container_name: corp_chat_postgres
