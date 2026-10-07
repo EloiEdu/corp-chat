@@ -31,7 +31,9 @@ interface SendMessagePayload extends ChannelPayload {
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:4200',
+    origin: [process.env.FRONTEND_ORIGIN ?? 'http://localhost:4200',
+             'https://corp-chat-roan.vercel.app'
+    ],
     methods: ['GET', 'POST'],
   },
 })
