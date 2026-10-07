@@ -24,6 +24,7 @@ model User {
 
   workspaces WorkspaceMember[]
   channels   ChannelMember[]
+  createdChannels Channel[] @relation("ChannelCreator")
   messages   Message[]
 
   @@map("users")
@@ -73,10 +74,12 @@ model Channel {
   description String?
   isPrivate   Boolean @default(false)
   workspaceId String
+  createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User?            @relation("ChannelCreator", fields: [createdById], references: [id], onDelete: SetNull)
   members   ChannelMember[]
   messages  Message[]
 

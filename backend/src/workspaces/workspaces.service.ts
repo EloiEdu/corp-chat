@@ -40,11 +40,23 @@ export class WorkspacesService {
     }
   }
 
-  findAll(userId: string) {
-    return this.prisma.workspace.findMany({
+  async findAll(userId: string) {
+    const workspaces = await this.prisma.workspace.findMany({
       where: { members: { some: { userId } } },
+      include: {
+        members: {
+          where: { userId },
+          select: { role: true },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
+
+    // Retorna somente o papel do usuário atual, sem expor os demais membros.
+    return workspaces.map(({ members, ...workspace }) => ({
+      ...workspace,
+      role: members[0]?.role ?? null,
+    }));
   }
 
   async findOne(id: string, userId: string) {
@@ -90,7 +102,7 @@ export class WorkspacesService {
           data: {
             workspaceId,
             userId: dto.userId,
-            role: 'MEMBER',
+            role: dto.role ?? 'MEMBER',
           },
         });
       });
@@ -100,6 +112,31 @@ export class WorkspacesService {
       }
       throw error;
     }
+  }
+
+  async remove(workspaceId: string, userId?: string) {
+    if (!userId) {
+      throw new ForbiddenException('Authenticated user is required');
+    }
+
+    const membership = await this.prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId, workspaceId } },
+      select: { role: true },
+    });
+
+    if (!membership) {
+      throw new NotFoundException('Workspace not found');
+    }
+
+    if (membership.role !== 'ADMIN') {
+      throw new ForbiddenException(
+        'Only workspace administrators can delete the workspace',
+      );
+    }
+
+    return this.prisma.workspace.delete({
+      where: { id: workspaceId },
+    });
   }
 
   private isPrismaErrorCode(error: unknown, code: string): boolean {

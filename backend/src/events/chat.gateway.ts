@@ -29,7 +29,12 @@ interface SendMessagePayload extends ChannelPayload {
   content: string;
 }
 
-@WebSocketGateway()
+@WebSocketGateway({
+  cors: {
+    origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:4200',
+    methods: ['GET', 'POST'],
+  },
+})
 export class ChatGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Delete,
   Param,
   ParseUUIDPipe,
   Post,
@@ -48,5 +49,13 @@ export class WorkspacesController {
       user.userId,
       dto,
     );
+  }
+
+  @Delete(':workspaceId')
+  remove(
+    @Param('workspaceId', new ParseUUIDPipe()) workspaceId: string,
+    @GetUser() user: AuthenticatedUser,
+  ) {
+    return this.workspacesService.remove(workspaceId, user.userId);
   }
 }

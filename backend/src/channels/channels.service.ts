@@ -1,4 +1,4 @@
-﻿import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateChannelDto } from './dto/create-channel.dto.js';
 
@@ -6,16 +6,24 @@ import { CreateChannelDto } from './dto/create-channel.dto.js';
 export class ChannelsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(workspaceId: string, dto: CreateChannelDto) {
-    await this.ensureWorkspaceExists(workspaceId);
+  async create(workspaceId: string, dto: CreateChannelDto, userId?: string) {
+    await this.ensureWorkspaceMembership(workspaceId, userId);
 
     try {
       return await this.prisma.channel.create({
         data: {
           name: dto.name.trim(),
           description: dto.description?.trim(),
-          isPrivate: dto.isPrivate,
+          isPrivate: dto.isPrivate ?? false,
           workspaceId,
+          createdById: userId,
+          members: userId
+            ? {
+                create: {
+                  userId,
+                },
+              }
+            : undefined,
         },
       });
     } catch (error) {
@@ -26,8 +34,8 @@ export class ChannelsService {
     }
   }
 
-  async findAll(workspaceId: string) {
-    await this.ensureWorkspaceExists(workspaceId);
+  async findAll(workspaceId: string, userId?: string) {
+    await this.ensureWorkspaceMembership(workspaceId, userId);
 
     return this.prisma.channel.findMany({
       where: { workspaceId },
@@ -35,8 +43,8 @@ export class ChannelsService {
     });
   }
 
-  async findOne(workspaceId: string, channelId: string) {
-    await this.ensureWorkspaceExists(workspaceId);
+  async findOne(workspaceId: string, channelId: string, userId?: string) {
+    await this.ensureWorkspaceMembership(workspaceId, userId);
 
     const channel = await this.prisma.channel.findFirst({
       where: { id: channelId, workspaceId },
@@ -46,13 +54,52 @@ export class ChannelsService {
     return channel;
   }
 
-  private async ensureWorkspaceExists(workspaceId: string) {
-    const workspace = await this.prisma.workspace.findUnique({
-      where: { id: workspaceId },
+  async remove(workspaceId: string, channelId: string, userId?: string) {
+    if (!userId) {
+      throw new ForbiddenException('Authenticated user is required');
+    }
+
+    const membership = await this.prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId, workspaceId } },
+      select: { role: true },
+    });
+
+    if (!membership) {
+      throw new NotFoundException('Workspace not found');
+    }
+
+    const channel = await this.prisma.channel.findFirst({
+      where: { id: channelId, workspaceId },
+      select: { id: true, createdById: true },
+    });
+
+    if (!channel) {
+      throw new NotFoundException('Channel not found in this workspace');
+    }
+
+    if (membership.role !== 'ADMIN' && channel.createdById !== userId) {
+      throw new ForbiddenException(
+        'Only workspace administrators or the channel creator can delete channels',
+      );
+    }
+
+    return this.prisma.channel.delete({ where: { id: channelId } });
+  }
+
+  private async ensureWorkspaceMembership(
+    workspaceId: string,
+    userId?: string,
+  ) {
+    if (!userId) {
+      throw new ForbiddenException('Authenticated user is required');
+    }
+
+    const membership = await this.prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId, workspaceId } },
       select: { id: true },
     });
 
-    if (!workspace) throw new NotFoundException('Workspace not found');
+    if (!membership) throw new NotFoundException('Workspace not found');
   }
 
   private isPrismaErrorCode(error: unknown, code: string): boolean {

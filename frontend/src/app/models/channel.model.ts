@@ -5,6 +5,7 @@ export interface Channel {
   description: string | null;
   isPrivate: boolean;
   workspaceId: string;
+  createdById: string | null;
   createdAt: string;
   updatedAt: string;
 }
