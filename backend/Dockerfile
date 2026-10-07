@@ -8,7 +8,7 @@ RUN npm run build
 FROM node:22-alpine AS runner
 WORKDIR /usr/src/app
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --production
 COPY --from=builder /usr/src/app/dist ./dist
 
 EXPOSE 3000
