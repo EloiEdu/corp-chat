@@ -18,11 +18,12 @@ export const jwtInterceptor: HttpInterceptorFn = (request, next) => {
     return next(request);
   }
 
-  if (
-    requestUrl.pathname === '/auth/login' ||
-    requestUrl.pathname === '/users' ||
-    requestUrl.pathname.startsWith('/users/')
-  ) {
+  const isPublicLogin =
+    request.method === 'POST' && requestUrl.pathname === '/auth/login';
+  const isPublicRegistration =
+    request.method === 'POST' && requestUrl.pathname === '/users';
+
+  if (isPublicLogin || isPublicRegistration) {
     return next(request);
   }
 

@@ -4,6 +4,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: builder
     container_name: corp_chat_api
     restart: always
     ports:

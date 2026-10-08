@@ -34,20 +34,33 @@ export class ChannelsService {
     }
   }
 
-  async findAll(workspaceId: string, userId?: string) {
+  async findAll(workspaceId: string, userId: string) {
     await this.ensureWorkspaceMembership(workspaceId, userId);
 
     return this.prisma.channel.findMany({
-      where: { workspaceId },
+      where: {
+        workspaceId,
+        OR: [
+          { isPrivate: false },
+          { isPrivate: true, members: { some: { userId } } },
+        ],
+      },
       orderBy: { createdAt: 'asc' },
     });
   }
 
-  async findOne(workspaceId: string, channelId: string, userId?: string) {
+  async findOne(workspaceId: string, channelId: string, userId: string) {
     await this.ensureWorkspaceMembership(workspaceId, userId);
 
     const channel = await this.prisma.channel.findFirst({
-      where: { id: channelId, workspaceId },
+      where: {
+        id: channelId,
+        workspaceId,
+        OR: [
+          { isPrivate: false },
+          { isPrivate: true, members: { some: { userId } } },
+        ],
+      },
     });
 
     if (!channel) throw new NotFoundException('Channel not found');
