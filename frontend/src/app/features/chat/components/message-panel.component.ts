@@ -119,7 +119,7 @@ import { ChatService } from '../services/chat.service';
       </div>
 
       <form class="shrink-0 border-t border-slate-800 px-4 py-4 sm:px-7" (submit)="handleSubmit($event)">
-        <div class="mx-auto flex w-full max-w-3xl items-end gap-3 rounded-xl border border-slate-700 bg-slate-900 p-3 transition focus-within:border-slate-500">
+        <div class="mx-auto flex w-full min-w-0 max-w-3xl items-end gap-3 rounded-xl border border-slate-700 bg-slate-900 p-3 transition focus-within:border-slate-500">
           <label class="sr-only" for="message-composer">Escreva uma mensagem</label>
           <textarea
             id="message-composer"
@@ -128,12 +128,12 @@ import { ChatService } from '../services/chat.service';
             (input)="updateDraft($event)"
             (keydown.enter)="handleEnter($event)"
             placeholder="Mensagem para #{{ channelName() }}"
-            class="max-h-32 min-h-10 flex-1 resize-y bg-transparent px-1 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500"
+            class="max-h-32 min-h-10 min-w-0 flex-1 resize-y bg-transparent px-1 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500"
           ></textarea>
           <button
             type="submit"
             [disabled]="!draft().trim() || !websocket.isConnected()"
-            class="rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
+            class="shrink-0 rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Enviar
           </button>
