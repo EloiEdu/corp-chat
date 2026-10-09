@@ -19,13 +19,14 @@ type DeletionTarget =
   standalone: true,
   imports: [FormsModule, MessagePanelComponent],
   template: `
-    <main class="flex h-screen min-h-[480px] overflow-hidden bg-slate-950 text-slate-100">
+    <main class="flex h-screen min-h-[480px] flex-col overflow-hidden bg-slate-950 text-slate-100 md:flex-row">
       <aside
-        class="flex w-[76px] shrink-0 flex-col items-center gap-4 border-r border-slate-800 bg-slate-950 py-5"
+        class="flex h-[76px] w-full shrink-0 flex-row items-center gap-3 overflow-x-auto border-b border-slate-800 bg-slate-950 px-4 py-3 md:h-auto md:w-[76px] md:flex-col md:overflow-x-visible md:border-r md:border-b-0 md:px-0 md:py-5 md:flex!"
+        [class.hidden]="mobileChatView()"
         aria-label="Workspaces"
       >
         <div
-          class="mb-2 flex size-11 items-center justify-center rounded-2xl bg-indigo-500 text-lg font-bold text-white shadow-lg shadow-indigo-950/40"
+          class="mb-0 flex size-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-500 text-lg font-bold text-white shadow-lg shadow-indigo-950/40 md:mb-2"
           aria-label="Corp Chat"
         >
           C
@@ -41,7 +42,7 @@ type DeletionTarget =
               [attr.aria-label]="'Abrir workspace ' + workspace.name"
               [attr.aria-pressed]="selectedWorkspaceId() === workspace.id"
               [title]="workspace.name"
-              class="flex size-11 items-center justify-center rounded-2xl text-sm font-semibold transition"
+              class="flex size-11 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold transition"
               [class.bg-indigo-500]="selectedWorkspaceId() === workspace.id"
               [class.text-white]="selectedWorkspaceId() === workspace.id"
               [class.bg-slate-800]="selectedWorkspaceId() !== workspace.id"
@@ -58,13 +59,16 @@ type DeletionTarget =
           (click)="openDialog('workspace')"
           aria-label="Criar workspace"
           title="Criar workspace"
-          class="flex size-11 items-center justify-center rounded-2xl border border-dashed border-slate-700 text-2xl text-slate-400 transition hover:border-indigo-400 hover:text-indigo-300"
+          class="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-dashed border-slate-700 text-2xl text-slate-400 transition hover:border-indigo-400 hover:text-indigo-300"
         >
           +
         </button>
       </aside>
 
-      <aside class="flex w-72 shrink-0 flex-col border-r border-slate-800 bg-slate-900/80">
+      <aside
+        class="flex min-h-0 w-full min-w-0 flex-1 flex-col border-r border-slate-800 bg-slate-900/80 md:w-72 md:flex-none md:flex!"
+        [class.hidden]="mobileChatView()"
+      >
         <header class="flex h-16 items-center justify-between border-b border-slate-800 px-5">
           <div class="min-w-0">
             <p class="text-xs font-medium tracking-wide text-slate-500 uppercase">
@@ -250,9 +254,23 @@ type DeletionTarget =
         </footer>
       </aside>
 
-      <section class="flex min-w-0 flex-1 flex-col bg-slate-950" aria-label="Chat">
+      <section
+        class="hidden min-h-0 min-w-0 flex-1 flex-col bg-slate-950 md:flex md:flex!"
+        [style.display]="mobileChatView() ? 'flex' : null"
+        aria-label="Chat"
+      >
+        <button
+          type="button"
+          (click)="showMobileNavigation()"
+          class="flex h-12 shrink-0 items-center gap-2 border-b border-slate-800 px-4 text-sm font-medium text-slate-300 hover:bg-slate-900 md:hidden"
+          aria-label="Voltar para workspaces e canais"
+        >
+          <span aria-hidden="true">←</span>
+          Workspaces e canais
+        </button>
         @if (selectedChannel(); as channel) {
           <app-message-panel
+            class="min-h-0 flex-1"
             [workspaceId]="selectedWorkspaceId() ?? ''"
             [channelId]="channel.id"
             [channelName]="channel.name"
@@ -475,6 +493,7 @@ export class ChatLayoutComponent implements OnInit {
   readonly selectedWorkspaceId = signal<string | null>(null);
   readonly channels = signal<Channel[]>([]);
   readonly selectedChannelId = signal<string | null>(null);
+  readonly mobileChatView = signal(false);
 
   readonly isLoadingWorkspaces = signal(false);
   readonly isLoadingChannels = signal(false);
@@ -630,6 +649,7 @@ export class ChatLayoutComponent implements OnInit {
           this.actionNotice.set('Workspace excluído.');
 
           if (wasSelected) {
+            this.mobileChatView.set(false);
             this.selectedWorkspaceId.set(null);
             this.channels.set([]);
             this.selectedChannelId.set(null);
@@ -661,7 +681,10 @@ export class ChatLayoutComponent implements OnInit {
           const remaining = this.channels().filter((channel) => channel.id !== target.id);
           const wasSelected = this.selectedChannelId() === target.id;
           this.channels.set(remaining);
-          if (wasSelected) this.selectedChannelId.set(remaining[0]?.id ?? null);
+          if (wasSelected) {
+            this.selectedChannelId.set(remaining[0]?.id ?? null);
+            if (remaining.length === 0) this.mobileChatView.set(false);
+          }
           this.resetDialog();
           this.actionNotice.set('Canal excluído.');
         },
@@ -719,6 +742,7 @@ export class ChatLayoutComponent implements OnInit {
         next: (channel) => {
           this.channels.update((channels) => [...channels, channel]);
           this.selectedChannelId.set(channel.id);
+          this.mobileChatView.set(true);
           this.resetDialog();
         },
         error: () => {
@@ -802,6 +826,7 @@ export class ChatLayoutComponent implements OnInit {
   selectWorkspace(workspace: Workspace): void {
     if (this.selectedWorkspaceId() === workspace.id) return;
 
+    this.mobileChatView.set(false);
     this.selectedWorkspaceId.set(workspace.id);
     this.selectedChannelId.set(null);
     this.channels.set([]);
@@ -811,6 +836,11 @@ export class ChatLayoutComponent implements OnInit {
 
   selectChannel(channel: Channel): void {
     this.selectedChannelId.set(channel.id);
+    this.mobileChatView.set(true);
+  }
+
+  showMobileNavigation(): void {
+    this.mobileChatView.set(false);
   }
 
   retryChannels(): void {
